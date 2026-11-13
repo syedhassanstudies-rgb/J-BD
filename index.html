@@ -149,6 +149,15 @@
   #tooltip .t-name{font-family:'Italiana';font-size:1rem;letter-spacing:.06em;color:#ffe9f2;white-space:nowrap}
   #tooltip .t-hint{font-family:'Audiowide';font-size:.48rem;letter-spacing:.22em;color:#ffb9d4;margin-top:3px;white-space:nowrap}
 
+  /* ---- grand finale banner ---- */
+  #finaleBanner{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.7rem;
+    pointer-events:none;opacity:0;transition:opacity 1.1s ease;text-align:center;padding:20px}
+  #finaleBanner.show{opacity:1}
+  #finaleBanner .fb-k{font-family:'Audiowide';font-size:clamp(.5rem,1.4vw,.7rem);letter-spacing:.6em;text-indent:.6em;color:#f2cf8d;
+    text-shadow:0 0 18px rgba(242,207,141,.65),0 0 44px rgba(242,207,141,.3)}
+  #finaleBanner .fb-t{font-family:'Italiana';font-size:clamp(1.7rem,6vw,3.4rem);line-height:1.15}
+  #finaleBanner .fb-s{font-style:italic;font-size:clamp(.9rem,2vw,1.15rem);color:rgba(255,224,238,.85);letter-spacing:.08em}
+
   /* ---- runtime fault toast ---- */
   #fault{position:fixed;left:52px;bottom:26px;z-index:70;display:none;align-items:center;gap:12px;max-width:min(430px,72vw);
     padding:11px 18px;border-radius:12px;background:rgba(32,10,14,.88);border:1px solid rgba(242,207,141,.45);
@@ -252,7 +261,6 @@
   @media (max-width:380px){
     #dock .btn-bubble,#dock .btn-ghost{font-size:.46rem;letter-spacing:.08em}
   }
-  /* landscape phones: keep everything clear of the short edges */
   @media (max-height:420px) and (orientation:landscape){
     #masthead{top:1.2dvh}
     #title .l1{font-size:.95rem}
@@ -272,7 +280,7 @@
 
 <div id="frame">
   <i></i><i></i><i></i><i></i>
-  <span class="ft">BLOOM.SYS // v3.1 — TWENTEENTH EDITION</span>
+  <span class="ft">BLOOM.SYS // v3.3 — TWENTEENTH EDITION</span>
   <span class="fl">GROWN FOR JENNIE · RESIDENT WIFE</span>
 </div>
 
@@ -312,6 +320,12 @@
 <div id="hint">DRAG TO ORBIT · SCROLL TO ZOOM · CLICK THE BLOOMS</div>
 <div id="fault"><b>NOTE</b><span id="faultMsg"></span></div>
 
+<div id="finaleBanner">
+  <div class="fb-k">THE FINAL WISH</div>
+  <div class="fb-t gold-text">Every Bloom, At Once</div>
+  <div class="fb-s">the garden heard you, Jennie — the light that never goes out is you</div>
+</div>
+
 <nav id="dock" class="corners">
   <i></i><i></i><i></i><i></i>
   <button class="btn-ghost" id="exploreBtn">
@@ -348,7 +362,7 @@
 
 <div id="intro">
   <div class="intro-inner">
-    <div class="intro-top">BLOOM.SYS <b>v3.1</b> — THE TWENTEENTH EDITION</div>
+    <div class="intro-top">BLOOM.SYS <b>v3.3</b> — THE TWENTEENTH EDITION</div>
     <div class="mono">
       <div class="mono-ring"><span class="orb"></span></div>
       <div class="mono-j gold-text">J</div>
@@ -419,18 +433,15 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 /* ============================================================
-   ★ YOUR SONG — fill this in whenever you decide. Nothing else
-   needs changing anywhere in the file.
-
-   1) get a DIRECT link to an .mp3 (easiest: put song.mp3 in the
-      same folder as this html file and just write url:'song.mp3')
-   2) fill in title + artist so she sees "now playing — …"
-   3) leave url empty ('') to keep the music-box happy-birthday
-
-   Example:
-   const SONG={title:'Die With A Smile',artist:'Lady Gaga & Bruno Mars',url:'song.mp3'};
+   ★ HER SONG — already wired. Requirements:
+     - your music file is named exactly  song.mp3  (lowercase)
+       and sits in the same GitHub folder as this page
+     - bought on iTunes (.m4a)? change url below to 'song.m4a'
+   It fades in when she taps ENTER and loops forever.
+   If the file can't be found, the music box plays instead —
+   the garden never goes silent.
    ============================================================ */
-const SONG={title:'',artist:'',url:''};
+const SONG={title:'There Is a Light That Never Goes Out',artist:'The Smiths',url:'song.mp3'};
 
 /* ============ helpers ============ */
 const rand=(a=1,b)=>b===undefined?Math.random()*a:a+Math.random()*(b-a);
@@ -464,12 +475,13 @@ if(isTouch){
 
 /* ============ sound (synthesized, no assets) ============ */
 const SoundKit={
-  ctx:null,master:null,muted:false,_melOn:false,_melT:null,
+  ctx:null,master:null,muted:false,_melOn:false,_melT:null,_pad:false,
   init(padOn=true){
-    if(this.ctx){if(this.ctx.state==='suspended')this.ctx.resume().catch(()=>{});return;}
-    this.ctx=new (window.AudioContext||window.webkitAudioContext)();
-    this.master=this.ctx.createGain();this.master.gain.value=.9;this.master.connect(this.ctx.destination);
-    if(padOn)this.startPad();
+    if(!this.ctx){
+      this.ctx=new (window.AudioContext||window.webkitAudioContext)();
+      this.master=this.ctx.createGain();this.master.gain.value=.9;this.master.connect(this.ctx.destination);
+    }else if(this.ctx.state==='suspended')this.ctx.resume().catch(()=>{});
+    if(padOn&&!this._pad){this._pad=true;this.startPad();}
   },
   suspend(){if(this.ctx&&this.ctx.state==='running')this.ctx.suspend().catch(()=>{});},
   resume(){if(this.ctx&&this.ctx.state==='suspended')this.ctx.resume().catch(()=>{});},
@@ -487,6 +499,11 @@ const SoundKit={
   },
   sparkle(){const f=pick([523.25,587.33,659.25,783.99,880]);this.note(f,0,.7,.06);this.note(f*1.5,.05,.5,.03);},
   arp(){[523.25,659.25,783.99,1046.5].forEach((f,i)=>this.note(f,i*.09,1,.07));},
+  finale(){
+    [523.25,659.25,783.99,1046.5].forEach((f,i)=>this.note(f,i*.1,1.4,.08));
+    this.note(1318.5,.45,2.4,.05);
+    this.note(1567.98,.75,2.6,.04);
+  },
   box(f,dt,beats){
     if(!this.ctx)return;
     const t=this.ctx.currentTime+dt;
@@ -548,23 +565,68 @@ soundBtn.addEventListener('click',()=>{
   soundBtn.classList.toggle('muted',SoundKit.muted);
 });
 
-/* her song — plays on the ENTER tap if you filled in SONG above */
-let songAudio=null;
-function startSong(){
-  if(!SONG.url)return false;
+/* ============ her song — prefetched during boot, fades in on ENTER ============ */
+let songAudio=null,songFailed=false,songPrefetched=false,songGain=null,songRouted=false;
+function prefetchSong(){
+  if(songPrefetched||!SONG.url)return;
+  songPrefetched=true;
   try{
     songAudio=new Audio(SONG.url);
-    songAudio.loop=true;songAudio.volume=.55;
-    songAudio.play().catch(()=>{
-      /* if the phone blocks it, the next tap anywhere starts it */
-      const retry=()=>{songAudio.play().catch(()=>{});stage.removeEventListener('pointerdown',retry);document.removeEventListener('click',retry);};
-      stage.addEventListener('pointerdown',retry);
-      document.addEventListener('click',retry);
+    songAudio.loop=true;songAudio.volume=1;songAudio.preload='auto';
+    songAudio.addEventListener('error',()=>{
+      songFailed=true;songAudio=null;songGain=null;
+      /* never a silent garden: fall back to the music box */
+      if(entered){try{SoundKit.init(true);SoundKit.playBirthdayLoop(.5);}catch(e){}}
     });
-    tick('now playing — '+(SONG.title||'her favorite song')+(SONG.artist?' · '+SONG.artist:''));
-    return true;
-  }catch(e){return false;}
+  }catch(e){songFailed=true;songAudio=null;}
 }
+/* Route the song through Web Audio — iPhones ignore element.volume,
+   so this is the only way her phone gets the gentle fade-in. */
+function routeSong(){
+  if(songRouted||!songAudio||!SoundKit.ctx)return;
+  try{
+    if(SoundKit.ctx.state!=='running')SoundKit.ctx.resume().catch(()=>{});
+    songGain=SoundKit.ctx.createGain();
+    songGain.gain.value=.0001;
+    const src=SoundKit.ctx.createMediaElementSource(songAudio);
+    src.connect(songGain);songGain.connect(SoundKit.master);
+    songRouted=true;
+  }catch(e){songGain=null;songRouted=false;}   /* fallback: plain element playback */
+}
+function startSong(){
+  if(!SONG.url||songFailed)return false;
+  if(!songAudio)prefetchSong();
+  if(!songAudio)return false;
+  routeSong();
+  const fadeUp=()=>{
+    try{
+      if(songGain&&SoundKit.ctx){
+        const t=SoundKit.ctx.currentTime;
+        songGain.gain.cancelScheduledValues(t);
+        songGain.gain.setValueAtTime(.0001,t);
+        songGain.gain.linearRampToValueAtTime(.5,t+2.2);
+      }else{
+        let v=0;
+        const iv=setInterval(()=>{
+          v+=.05;
+          if(songAudio)songAudio.volume=Math.min(.5,v);
+          if(v>=.5)clearInterval(iv);
+        },110);
+      }
+    }catch(e){}
+  };
+  songAudio.addEventListener('playing',fadeUp,{once:true});
+  const pr=songAudio.play();
+  if(pr&&pr.catch)pr.catch(()=>{
+    /* if the phone blocks it, the next tap anywhere starts it */
+    const retry=()=>{if(songAudio)songAudio.play().catch(()=>{});stage.removeEventListener('pointerdown',retry);document.removeEventListener('click',retry);};
+    stage.addEventListener('pointerdown',retry);
+    document.addEventListener('click',retry);
+  });
+  tick('now playing — '+SONG.title+' \u00B7 '+SONG.artist);
+  return true;
+}
+prefetchSong();   /* start downloading during the loading screen */
 
 /* ============ fault reporting ============ */
 let faultTimer=null;
@@ -615,11 +677,14 @@ function enter(){
   intro.classList.add('leave');
   setTimeout(()=>intro.remove(),1400);
   document.body.classList.add('on');
+  /* audio: context first (the song routes through it), then the song,
+     then the music-box fallback if the song can't play. Each step guarded. */
+  try{SoundKit.init(false);}catch(e){}
+  let songOn=false;
+  try{songOn=startSong();}catch(e){songOn=false;}
   try{
-    const songOn=startSong();
-    SoundKit.init(!songOn);
+    if(!songOn){SoundKit.init(true);SoundKit.playBirthdayLoop(1.4);}
     SoundKit.arp();
-    if(!songOn)SoundKit.playBirthdayLoop(1.4);
   }catch(e){/* sound is a bonus, never a blocker */}
   if(sceneOK){
     try{beginExperience();}
@@ -774,8 +839,9 @@ function makeSparkleTexture(){
   g.addColorStop(0,'rgba(255,255,255,.95)');g.addColorStop(.4,'rgba(255,240,250,.35)');g.addColorStop(1,'rgba(255,240,250,0)');
   x.fillStyle=g;x.fillRect(0,0,128,128);
   const star=(rot,len,d,alpha)=>{x.save();x.translate(64,64);x.rotate(rot);x.globalAlpha=alpha;x.fillStyle='#fff';
-    x.beginPath();x.moveTo(0,-len);x.lineTo(d,-d);x.lineTo(len,0);x.lineTo(d,d);x.lineTo(0,len);x.lineTo(d,-d+2*d);
-    x.lineTo(-len,0);x.lineTo(-d,-d);
+    x.beginPath();
+    x.moveTo(0,-len);x.lineTo(d,-d);x.lineTo(len,0);x.lineTo(d,d);
+    x.lineTo(0,len);x.lineTo(-d,d);x.lineTo(-len,0);x.lineTo(-d,-d);
     x.closePath();x.fill();x.restore();};
   star(0,58,5,1);star(Math.PI/4,20,2.6,.65);
   const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
@@ -818,14 +884,11 @@ const groundH=(x,z)=>{
 }
 
 /* ============ shared geometries ============ */
-/* Tulip petal: drawn base-at-origin, extending up +Y, width along X.
-   z-shaping cups it toward -Z so that, mounted as a stave around the
-   flower axis, it wraps AROUND the axis like a real tulip petal. */
 function buildPetalGeometry(){
   const w=.38,h=1,s=new THREE.Shape();
   s.moveTo(0,0);
-  s.bezierCurveTo(w*.5,.02,  w*.68,.38, w*.34,.72);   // full round belly
-  s.bezierCurveTo(w*.2,.86,  w*.06,.94, 0,h);         // shoulder into the soft tulip point
+  s.bezierCurveTo(w*.5,.02,  w*.68,.38, w*.34,.72);
+  s.bezierCurveTo(w*.2,.86,  w*.06,.94, 0,h);
   s.bezierCurveTo(-w*.06,.94,-w*.2,.86, -w*.34,.72);
   s.bezierCurveTo(-w*.68,.38,-w*.5,.02, 0,0);
   const g=new THREE.ShapeGeometry(s,12);
@@ -833,8 +896,8 @@ function buildPetalGeometry(){
   for(let i=0;i<p.count;i++){
     const x=p.getX(i),y=p.getY(i);
     const nx=Math.min(Math.abs(x)/(w*.5),1),ny=y;
-    const cup=-.26*Math.pow(nx,1.4)*(.2+.8*ny);  // wrap toward the axis (barrel stave)
-    const bow=.16*ny*ny;                         // rim flares OUTWARD when open
+    const cup=-.26*Math.pow(nx,1.4)*(.2+.8*ny);  // barrel-stave wrap
+    const bow=.16*ny*ny;                         // rim flares OUT when open
     const pinch=-.06*Math.pow(ny,6);             // tip gathers in — seals the bud
     p.setZ(i,cup+bow+pinch);
   }
@@ -902,6 +965,7 @@ const wingMat=new THREE.MeshPhysicalMaterial({color:0xfff2f8,metalness:.45,rough
   emissive:0x2a0a14,emissiveIntensity:.4});
 const bodyMat=new THREE.MeshStandardMaterial({color:0x2e1a26,roughness:.4,metalness:.3});
 const fallenMats=tulipDefs.map(d=>new THREE.MeshStandardMaterial({color:new THREE.Color(d.color).multiplyScalar(.55),roughness:.9,side:THREE.DoubleSide}));
+const rainMats=tulipDefs.map(d=>new THREE.MeshStandardMaterial({color:d.color,roughness:.85,side:THREE.DoubleSide}));
 
 /* ============ tulips ============ */
 const tulips=[];
@@ -931,16 +995,10 @@ function makeTulip({def,height,scale,open,pos}){
   const head=new THREE.Group();
   head.position.set(leanX,stemH,leanZ);
   head.rotation.set(leanZ*.5,rand(0,Math.PI*2),-leanX*.5);
-  /* green calyx cup where petals meet the stem */
   const calyx=new THREE.Mesh(calyxGeo,stemMat);
   calyx.scale.set(1.55,.65,1.55);calyx.position.y=-.02;head.add(calyx);
 
-  /* Petal rig, v2 — petals as staves around the flower axis.
-     Each holder rotates a petal's plane around the axis; the petal
-     base sits just off the axis and its local +Z points radially
-     OUTWARD, so a positive rotation.x (the "open" tilt) swings the
-     petal tip AWAY from the axis — blooming outward, like a real
-     tulip. Closed buds lean slightly inward over the core. */
+  /* petals as staves around the axis — blooming swings OUTWARD */
   const petals=[];
   for(let i=0;i<6;i++){
     const inner=i>=3;
@@ -949,7 +1007,7 @@ function makeTulip({def,height,scale,open,pos}){
     const m=new THREE.Mesh(petalGeo,mat);
     const s=scale*(inner?.95:1.1);
     m.scale.set(s,s*(inner?1.05:1),s);
-    m.position.z=.04;                                    // stave sits just off the axis
+    m.position.z=.04;
     petals.push({m,closedTilt:inner?-.09:-.15,openTilt:inner?.4:.62,jx:rand(-.05,.05)});
     holder.add(m);head.add(holder);
   }
@@ -1073,7 +1131,7 @@ for(let i=0;i<12;i++){
   scene.add(sp);
 }
 
-/* ============ bursts & floating wishes ============ */
+/* ============ bursts, petal rain & floating wishes ============ */
 const bursts=[],floaters=[],tmpV=new THREE.Vector3();
 function sparkleBurst(pos,baseColor=0xffd9ee,count=12,speed=1.1,size=.3){
   for(let i=0;i<count;i++){
@@ -1093,6 +1151,17 @@ function miniHeartBurst(pos){
     m.position.copy(pos);
     const v=V3(rand(-1,1),rand(.2,1.2),rand(-1,1)).normalize().multiplyScalar(rand(.8,2)).add(V3(0,rand(.4,1),0));
     bursts.push({obj:m,kind:'heart',v,life:1,decay:rand(.8,1.2),spin:rand(-3,3),size:rand(.06,.11)});
+    scene.add(m);
+  }
+}
+function petalRain(count){
+  for(let i=0;i<count;i++){
+    const m=new THREE.Mesh(petalGeo,pick(rainMats));
+    const a=rand(Math.PI*2),r=rand(0,7);
+    m.position.set(Math.cos(a)*r,rand(5.5,8.5),Math.sin(a)*r*.8);
+    m.rotation.set(rand(6),rand(6),rand(6));
+    bursts.push({obj:m,kind:'petal',v:V3(rand(-.3,.3),rand(-.5,-.2),rand(-.3,.3)),
+      life:1,decay:rand(.14,.22),spin:rand(-2.2,2.2),size:rand(.32,.5),ph:rand(7)});
     scene.add(m);
   }
 }
@@ -1128,7 +1197,7 @@ function spawnFloater(text){
   sparkleBurst(grp.position.clone().add(V3(0,.6,0)),0xffd9ee,10,.6,.4);
 }
 
-/* ============ copy — husband/wife, one smol joke, the twenteenth ============ */
+/* ============ copy — husband/wife, twenteenth, Smiths nods ============ */
 const FORTUNES=[
   'in loving memory of the teens — beautiful service, excellent flowers',
   'happy twenteenth — twenty years old, one hundred percent teenage chaos',
@@ -1139,6 +1208,8 @@ const FORTUNES=[
   'the crush allegations? the flowers refuse to comment',
   'soft life, loud joy, zero boring chapters',
   'may every room you walk into feel like golden hour',
+  'if a double-decker bus crashes into the garden — every tulip had a good life',
+  'the light that never goes out? currently wearing a birthday hat',
   'this garden is the teens\u2019 favorite funeral so far',
 ];
 const HEART_LINES=[
@@ -1266,8 +1337,8 @@ exploreBtn.addEventListener('click',()=>{
   else tweenCam(d.p.clone(),d.t.clone(),1500);
 });
 
-/* ============ wishes ============ */
-let wishCount=0;
+/* ============ wishes + THE FINAL WISH (grand finale on the 3rd) ============ */
+let wishCount=0,finaleDone=false;
 function renderWishLog(){
   wishLogEl.innerHTML='';
   wishLog.slice(0,3).forEach((w,i)=>{
@@ -1289,7 +1360,33 @@ function sendWish(text,isUser){
     wishChip.classList.remove('pop');void wishChip.offsetWidth;wishChip.classList.add('pop');
     SoundKit.arp();
     tick('your wish is floating up to Jennie');
+    if(wishCount===2&&!finaleDone)tick('the garden is holding its breath — one more wish\u2026');
+    if(wishCount===3&&!finaleDone)setTimeout(grandFinale,1400);
   }
+}
+function grandFinale(){
+  if(finaleDone)return;
+  finaleDone=true;
+  SoundKit.finale();
+  const banner=document.getElementById('finaleBanner');
+  banner.classList.add('show');
+  setTimeout(()=>banner.classList.remove('show'),5600);
+  /* every bud blooms in a golden cascade */
+  tulips.forEach((tp,i)=>{
+    setTimeout(()=>{
+      tp.excite=1;
+      if(tp.open<.99)tp.bloomAnim={from:tp.open,to:1,start:performance.now(),dur:650};
+      const p=new THREE.Vector3();
+      tp.head.getWorldPosition(p);
+      sparkleBurst(p,0xffe2a8,7,1.2,.36);
+    },i*65);
+  });
+  hearts.forEach((h,i)=>setTimeout(()=>{h.pulse=1;miniHeartBurst(h.mesh.position);},600+i*130));
+  butterflies.forEach(b=>b.userData.fly.excite=3);
+  setTimeout(()=>petalRain(26),900);
+  setTimeout(()=>petalRain(20),1900);
+  tick('the final wish — the whole garden heard it');
+  setTimeout(()=>tick('every tulip blooming at once — only ever for Jennie'),2800);
 }
 function openModal(){modalWrap.classList.add('open');setTimeout(()=>wishInput.focus(),80);}
 function closeModal(){modalWrap.classList.remove('open');}
@@ -1316,7 +1413,6 @@ window.addEventListener('keydown',e=>{
     else if(exploring)exploreBtn.click();
   }
 });
-/* keep the wish panel centered above the phone keyboard */
 if(window.visualViewport){
   const vv=window.visualViewport;
   const vvFit=()=>{
@@ -1452,14 +1548,22 @@ function frame(){
       bursts.splice(i,1);continue;
     }
     b.obj.position.addScaledVector(b.v,dt);
-    b.v.multiplyScalar(Math.max(0,1-2.4*dt));
     if(b.kind==='spark'){
+      b.v.multiplyScalar(Math.max(0,1-2.4*dt));
       b.v.y+=.5*dt;
       b.obj.material.opacity=clamp01(b.life)*.95;
       b.obj.material.rotation+=b.spin*dt;
       const s=b.size*(.35+.75*b.life);
       b.obj.scale.set(s,s,1);
+    }else if(b.kind==='petal'){
+      b.v.y-=.45*dt;
+      b.v.x*=Math.max(0,1-.3*dt);b.v.z*=Math.max(0,1-.3*dt);
+      b.obj.position.x+=Math.sin(t*1.8+b.ph)*dt*.5;
+      b.obj.rotation.x+=b.spin*dt;b.obj.rotation.z+=b.spin*.7*dt;
+      b.obj.scale.setScalar(b.size*Math.min(1,b.life*1.6));
+      if(b.obj.position.y<groundH(b.obj.position.x,b.obj.position.z)+.05)b.life=0;
     }else{
+      b.v.multiplyScalar(Math.max(0,1-2.4*dt));
       b.v.y-=1.4*dt;
       b.obj.rotation.x+=b.spin*dt;b.obj.rotation.y+=b.spin*.7*dt;
       b.obj.scale.setScalar(Math.max(.001,b.size*b.life));
@@ -1503,6 +1607,12 @@ document.addEventListener('visibilitychange',()=>{
     SoundKit.resume();
     if(songAudio&&entered)songAudio.play().catch(()=>{});
   }
+});
+
+/* last-resort safety: if the phone ever pauses the song (tab switch,
+   notification, etc.), her very next tap anywhere brings it back */
+document.addEventListener('pointerdown',()=>{
+  if(entered&&songAudio&&!songFailed&&songAudio.paused)songAudio.play().catch(()=>{});
 });
 
 /* ============ resize (debounced) ============ */
